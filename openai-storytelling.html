@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenAPI AI-Powered Storytelling Demo</title>
+    <style>
+      /* General styling */
+      body {
+        font-family: 'Arial', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f4f4f9;
+      }
+
+      /* Container styling */
+      #story-container {
+        max-width: 700px;
+        padding: 30px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        text-align: center;
+      }
+
+      /* Title styling */
+      #story-container h2 {
+        font-size: 2.5em;
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: bold;
+      }
+
+      /* Story text styling */
+      #story-text {
+        font-size: 1.5em;
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 30px;
+      }
+
+      /* Button styling */
+      #choices button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 15px 20px;
+        font-size: 1.2em;
+        border-radius: 8px;
+        margin: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.2s;
+      }
+
+      /* Button hover effect */
+      #choices button:hover {
+        background-color: #0056b3;
+        transform: scale(1.05);
+      }
+
+      /* Button focus effect */
+      #choices button:focus {
+        outline: none;
+        box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="story-container">
+      <h2>Interactive Story</h2>
+      <p id="story-text">
+        Welcome to your adventure! Choose your path to begin.
+      </p>
+      <div id="choices"></div>
+    </div>
+    <script>
+      let storyHistory = ''
+      async function generateStory(prompt, isContinuation = false) {
+        try {
+          const response = await fetch(
+            'https://api.openai.com/v1/chat/completions',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer YOUR_KEY`
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
+                  {
+                    role: 'system',
+                    content:
+                      'You are a storytelling assistant. Maintain continuity with each response, using the same character, setting, and storyline. Each response should end with a complete sentence and conclude logically. Always end with a period.'
+                  },
+                  {
+                    role: 'user',
+                    content: isContinuation
+                      ? `${storyHistory}\n\nThe user chose: ${prompt}. Continue the story logically, keeping the same character and setting.`
+                      : `${prompt} Start a story with the character Alex. Write exactly 1 complete sentence, and ensure the last sentence concludes logically.`
+                  }
+                ],
+                max_tokens: 30
+              })
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          const data = await response.json()
+          if (data.choices && data.choices.length > 0) {
+            let storyText = data.choices[0].message.content.trim()
+            if (!storyText.endsWith('.')) {
+              storyText += '.'
+            }
+            storyHistory += ` ${storyText}`
+            return storyText
+          } else {
+            throw new Error('No response data found.')
+          }
+        } catch (error) {
+          console.error('Error generating story:', error)
+          return 'There was an error generating the story. Please try again.'
+        }
+      }
+
+      async function updateStory(userChoice) {
+        const storyText = document.getElementById('story-text')
+        const choicesDiv = document.getElementById('choices')
+        const prompt = `The user chose: ${userChoice}. Continue the story.`
+        const newStory = await generateStory(prompt)
+        storyText.innerText = newStory
+        choicesDiv.innerHTML = ''
+        createChoiceButtons(['Explore further', 'Retreat back', 'Take a rest'])
+      }
+
+      function createChoiceButtons(options) {
+        const choicesDiv = document.getElementById('choices')
+        options.forEach(option => {
+          const button = document.createElement('button')
+          button.innerText = option
+          button.onclick = () => updateStory(option)
+          choicesDiv.appendChild(button)
+        })
+      }
+
+      createChoiceButtons([
+        'Venture into the forest',
+        'Head toward the mountains',
+        'Follow the river'
+      ])
+    </script>
+  </body>
+</html>
