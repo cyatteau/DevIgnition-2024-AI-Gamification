@@ -8,7 +8,7 @@ Welcome to the repository for **AI-Powered Gamification for the Web** at DevIgni
 - **`azure-sentiment-analysis.html`**: [Demo](https://github.com/cyatteau/DevIgnition-2024-AI-Gamification/blob/main/azure-sentiment-analysis.html) showing real-time sentiment analysis using Azure's Text Analytics API.
 - **`openai-storytelling.html`**: OpenAI API storytelling [demo](https://github.com/cyatteau/DevIgnition-2024-AI-Gamification/blob/main/openai-storytelling.html).
 - **`tensorflow-adaptive-difficulty.html`**: [Demo](https://github.com/cyatteau/DevIgnition-2024-AI-Gamification/blob/main/tensorflow-adative-difficulty.html) showing adaptive difficulty with TensorFlow.js.
-- **`brain-streak-recognition.html`**: Demo showcasing streak recognition using Brain.js.
+- **`brain-streak-recognition.html`**: [Demo](https://github.com/cyatteau/DevIgnition-2024-AI-Gamification/blob/main/brain-streak-recognition.html) showcasing streak recognition using Brain.js.
 - **`map-ai-quizzes.html`**: AI-powered map demo.
 
 ## Resources
