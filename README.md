@@ -10,3 +10,9 @@ Welcome to the repository for **AI-Powered Gamification for the Web** at DevIgni
 - **`tensorflow-adaptive-difficulty.html`**: Demo showing adaptive difficulty with TensorFlow.js.
 - **`brain-streak-recognition.html`**: Demo showcasing streak recognition using Brain.js.
 - **`map-ai-quizzes.html`**: AI-powered map demo.
+
+## Resources
+- Microsoft Azure Text Analytics: [Azure Text Analytics Documentation](https://azure.microsoft.com/en-us/products/ai-services/ai-language)
+- OpenAI API: [OpenAI Documentation](https://platform.openai.com/docs/overview)
+- TensorFlow.js: [TensorFlow.js Documentation](https://www.tensorflow.org/js)
+- Brain.js: [Brain.js Documentation](https://brain.js.org)
