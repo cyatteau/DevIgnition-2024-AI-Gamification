@@ -16,3 +16,5 @@ Welcome to the repository for **AI-Powered Gamification for the Web** at DevIgni
 - OpenAI API: [OpenAI Documentation](https://platform.openai.com/docs/overview)
 - TensorFlow.js: [TensorFlow.js Documentation](https://www.tensorflow.org/js)
 - Brain.js: [Brain.js Documentation](https://brain.js.org)
+- ArcGIS Location Platform: [Create an account](https://location.arcgis.com/)
+- Esri Developer [ArcGIS Documentation](https://developers.arcgis.com/)
