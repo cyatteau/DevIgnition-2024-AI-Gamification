@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamic Difficulty Adjustment with TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 5px;
+      }
+
+      h2 {
+        color: #333;
+        font-size: 40px;
+        margin-bottom: 5px;
+      }
+
+      #performance-metric {
+        font-weight: bold;
+      }
+
+      .progress-container {
+        width: 100%;
+        max-width: 400px;
+        background-color: #ddd;
+        border-radius: 5px;
+        margin: 0 auto;
+        margin-bottom: 12px;
+      }
+
+      .progress-bar {
+        height: 20px;
+        background-color: #4caf50;
+        width: 50%;
+        border-radius: 5px;
+        transition: width 0.3s, background-color 0.3s;
+        text-align: center;
+      }
+
+      .easy {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .medium {
+        background-color: #ffc107;
+        color: black;
+      }
+
+      .hard {
+        background-color: #f44336;
+        color: white;
+      }
+
+      #model-explanation {
+        font-style: italic;
+        margin-top: 10px;
+        font-size: 1.1em;
+      }
+
+      canvas {
+        max-width: 80%;
+        margin-top: 20px;
+        max-height: 60%;
+      }
+
+      .feedback {
+        font-size: 1.2em;
+        margin: 10px;
+        color: #555;
+        text-align: center;
+      }
+
+      .info {
+        margin: 0 auto;
+        width: 700px;
+        text-align: center;
+        align-items: center;
+      }
+      .simulate-btn {
+        padding: 10px 10px;
+        border: none;
+        border-radius: 6px;
+        background-color: #0078d4;
+        color: #ffffff;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      .simulate-btn:hover {
+        background-color: #005bb5;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Dynamic Difficulty Adjustment</h2>
+    <div class="info">
+      <p>Performance Metric (0-1): <span id="performance-metric">0.5</span></p>
+      <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <button class="simulate-btn" onclick="simulatePerformance()">
+        Simulate Performance
+      </button>
+      <div id="model-explanation">
+        Difficulty is adjusted based on performance.
+      </div>
+      <div id="feedback-message" class="feedback"></div>
+    </div>
+
+    <canvas id="difficulty-chart" width="400" height="200"></canvas>
+    <script>
+      let model
+      let sentimentChart
+
+      // Create and compile a TensorFlow.js model
+      async function createModel() {
+        model = tf.sequential()
+        model.add(
+          tf.layers.dense({ inputShape: [1], units: 8, activation: 'relu' })
+        )
+        model.add(tf.layers.dense({ units: 3, activation: 'softmax' }))
+        model.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy' })
+        console.log('Model created and compiled.')
+      }
+
+      // Train the model with expanded performance data
+      async function trainModel() {
+        const performanceData = tf.tensor2d(
+          [
+            0.1, 0.12, 0.15, 0.17, 0.2, 0.22, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65,
+            0.8, 0.82, 0.85, 0.87, 0.9, 0.95
+          ],
+          [18, 1]
+        )
+        const difficultyData = tf.tensor2d([
+          [1, 0, 0],
+          [1, 0, 0],
+          [1, 0, 0],
+          [1, 0, 0],
+          [1, 0, 0],
+          [1, 0, 0], // Easy
+          [0, 1, 0],
+          [0, 1, 0],
+          [0, 1, 0],
+          [0, 1, 0],
+          [0, 1, 0],
+          [0, 1, 0], // Medium
+          [0, 0, 1],
+          [0, 0, 1],
+          [0, 0, 1],
+          [0, 0, 1],
+          [0, 0, 1],
+          [0, 0, 1] // Hard
+        ])
+
+        await model.fit(performanceData, difficultyData, {
+          epochs: 300,
+          shuffle: true
+        })
+      }
+
+      // Save the model to local storage
+      async function saveModel() {
+        await model.save('localstorage://my-demo-model')
+        console.log('Model saved to local storage!')
+      }
+
+      // Load the model from local storage or create and train a new model
+      async function loadOrCreateModel() {
+        const models = await tf.io.listModels()
+        if (models['localstorage://my-demo-model']) {
+          model = await tf.loadLayersModel('localstorage://my-demo-model')
+          console.log('Model loaded from local storage.')
+        } else {
+          await createModel()
+          await trainModel()
+          await saveModel()
+        }
+      }
+
+      // Function to generate feedback message using OpenAI API
+      async function generateFeedbackMessage(difficultyLevel, performance) {
+        const apiKey =
+          'YOUR_KEY' // Replace with your OpenAI API key
+        const prompt = `Provide a concise and complete motivational message in one sentence for a player with a performance score of ${performance.toFixed(
+          2
+        )} at a difficulty level of ${difficultyLevel}. Make sure it ends at the end of a sentence.`
+
+        try {
+          const response = await fetch(
+            'https://api.openai.com/v1/chat/completions',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
+                  {
+                    role: 'system',
+                    content:
+                      'You are an encouraging game assistant providing brief, motivational feedback that is concise and ends with a complete thought.'
+                  },
+                  {
+                    role: 'user',
+                    content: prompt
+                  }
+                ],
+                max_tokens: 30,
+                temperature: 0.5
+              })
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          const data = await response.json()
+          if (data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content.trim()
+          } else {
+            throw new Error('No response data found.')
+          }
+        } catch (error) {
+          console.error('Error generating feedback message:', error)
+          return "Keep going! You're doing great!"
+        }
+      }
+
+      // Update predictDifficulty function to include dynamic feedback generation
+      async function predictDifficulty(performance) {
+        const inputTensor = tf.tensor2d([performance], [1, 1])
+        const prediction = model.predict(inputTensor)
+        const difficultyIndex = prediction.argMax(-1).dataSync()[0]
+
+        const difficultyLevels = ['Easy', 'Medium', 'Hard']
+        const difficultyLevel = difficultyLevels[difficultyIndex]
+
+        const feedbackElement = document.getElementById('feedback-message')
+        const feedbackMessage = await generateFeedbackMessage(
+          difficultyLevel,
+          performance
+        )
+        feedbackElement.innerText = feedbackMessage
+
+        document.getElementById(
+          'model-explanation'
+        ).innerText = `Performance of ${performance.toFixed(
+          2
+        )} results in ${difficultyLevel} difficulty.`
+
+        return difficultyIndex
+      }
+
+      // Simulate performance and update difficulty and chart
+      function simulatePerformance() {
+        const performance = Math.random()
+        document.getElementById('performance-metric').innerText =
+          performance.toFixed(2)
+
+        const progressBar = document.getElementById('progress-bar')
+        progressBar.style.width = `${performance * 100}%`
+        progressBar.style.backgroundColor =
+          performance < 0.4
+            ? '#4CAF50'
+            : performance < 0.7
+            ? '#FFC107'
+            : '#F44336'
+
+        const difficultyIndex = predictDifficulty(performance)
+        difficultyChart.data.labels.push('')
+        difficultyChart.data.datasets[0].data.push(performance)
+        difficultyChart.data.datasets[1].data.push(difficultyIndex)
+        difficultyChart.update()
+      }
+
+      function createChart() {
+        const chartContext = document
+          .getElementById('difficulty-chart')
+          .getContext('2d')
+        difficultyChart = new Chart(chartContext, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Performance',
+                borderColor: 'blue',
+                data: []
+              },
+              {
+                label: 'Difficulty (0=Easy, 0.5=Medium, 1=Hard)',
+                borderColor: '#F44336',
+                data: []
+              }
+            ]
+          },
+          options: {
+            plugins: {
+              legend: {
+                display: false // Hide the legend
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                min: 0,
+                max: 1,
+                ticks: {
+                  stepSize: 0.5,
+                  callback: function (value) {
+                    if (value === 0) return 'Easy'
+                    if (value === 0.5) return 'Medium'
+                    if (value === 1) return 'Hard'
+                    return ''
+                  }
+                }
+              }
+            }
+          }
+        })
+      }
+
+      // Initialize the model and chart on load
+      async function init() {
+        await loadOrCreateModel()
+        createChart()
+      }
+
+      init()
+    </script>
+  </body>
+</html>
