@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Streak Recognition - Gamification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background-color: #f4f6f9;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 1.8em;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      /* Input and button styling */
+      input[type='number'] {
+        padding: 10px;
+        width: 100px;
+        font-size: 1em;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+
+      button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 6px;
+        background-color: #0078d4;
+        color: white;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #005bb5;
+      }
+
+      .feedback {
+        margin-top: 15px;
+        font-size: 1.2em;
+        color: #555;
+        font-weight: bold;
+      }
+
+      /* Progress bar for streak tracking */
+      .progress-bar {
+        width: 80%;
+        background-color: #ddd;
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0 auto;
+        margin-top: 20px;
+        position: relative;
+      }
+
+      .progress-fill {
+        height: 100%;
+        width: 0;
+        background-color: #4caf50;
+        border-radius: 10px;
+        transition: width 0.5s ease;
+      }
+
+      /* Confidence label inside the progress bar */
+      .confidence-label {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+      }
+
+      /* Badge styles */
+      .badges {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 25px;
+      }
+
+      .badge {
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #ddd;
+        font-size: 1em;
+        opacity: 0.5;
+        transition: transform 0.3s, opacity 0.3s;
+      }
+
+      .badge.earned {
+        background-color: rgb(236, 201, 2);
+        color: white;
+        font-weight: bold;
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      /* Badge specific icons */
+      #consistency-badge::before {
+        content: '🔁 ';
+      }
+
+      #improvement-badge::before {
+        content: '📈 ';
+      }
+
+      .app {
+        width: 90%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <h2>AI Streak Recognition</h2>
+
+      <p>
+        Score (0-100):
+        <input type="number" id="score" min="0" max="100" value="50" />
+      </p>
+      <button onclick="evaluateStreak()">Submit Score</button>
+
+      <div class="feedback" id="feedback-message">
+        Feedback will appear here.
+      </div>
+
+      <!-- Progress bar container -->
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+        <div id="confidence-label" class="confidence-label">0%</div>
+      </div>
+
+      <!-- Badge display for streak levels -->
+      <div class="badges">
+        <div class="badge" id="consistency-badge">Consistency Streak</div>
+        <div class="badge" id="improvement-badge">Improvement Streak</div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/brain.js"></script>
+    <script>
+      const net = new brain.NeuralNetwork({ hiddenLayers: [100] })
+      const scoreHistory = []
+      let consistencyCount = 0
+      let lastImprovement = null
+      const threshold = 3 // Number of consistent/improving entries required for a streak
+
+      function trainNetwork() {
+        net.train([
+          { input: { score: 0.3, trend: 0.0 }, output: { consistency: 1 } },
+          { input: { score: 0.4, trend: 0.0 }, output: { consistency: 1 } },
+          { input: { score: 0.6, trend: 0.0 }, output: { consistency: 1 } },
+          { input: { score: 0.7, trend: 0.1 }, output: { improvement: 1 } },
+          { input: { score: 0.8, trend: 0.1 }, output: { improvement: 1 } },
+          { input: { score: 0.4, trend: -0.1 }, output: { noStreak: 1 } },
+          { input: { score: 0.5, trend: -0.2 }, output: { noStreak: 1 } }
+        ])
+      }
+
+      function evaluateStreak() {
+        const score = parseFloat(document.getElementById('score').value) / 100
+        scoreHistory.push(score)
+
+        if (scoreHistory.length > 1) {
+          const trend = score - scoreHistory[scoreHistory.length - 2]
+          const output = net.run({ score, trend })
+
+          const streakType = Object.entries(output).reduce((a, b) =>
+            a[1] > b[1] ? a : b
+          )[0]
+          updateUI(streakType, output[streakType], trend)
+        } else {
+          document.getElementById('feedback-message').innerText =
+            'Submit another score to evaluate streak!'
+        }
+      }
+
+      function updateUI(streakType, confidence, trend) {
+        const feedbackMessages = {
+          consistency: "Nice! You're on a consistency streak!",
+          improvement: "Great work! You've improved!",
+          noStreak: 'Keep going! Build your streak!'
+        }
+
+        document.getElementById('feedback-message').innerText =
+          feedbackMessages[streakType]
+
+        const confidencePercentage = Math.round(confidence * 100)
+        document.getElementById(
+          'confidence-label'
+        ).innerText = `Model Confidence: ${confidencePercentage}%`
+
+        if (streakType === 'consistency') {
+          consistencyCount++
+          if (consistencyCount >= threshold) {
+            document.getElementById('consistency-badge').classList.add('earned')
+          }
+          document.getElementById(
+            'progress-fill'
+          ).style.width = `${confidencePercentage}%`
+        } else if (streakType === 'improvement' && trend > 0) {
+          lastImprovement = trend
+          document.getElementById('improvement-badge').classList.add('earned')
+          document.getElementById(
+            'progress-fill'
+          ).style.width = `${confidencePercentage}%`
+        } else {
+          document.getElementById('progress-fill').style.width = '0%'
+          document.getElementById('confidence-label').innerText =
+            'Model Confidence: 0%'
+          consistencyCount = 0
+          lastImprovement = null
+        }
+      }
+
+      trainNetwork()
+    </script>
+  </body>
+</html>
