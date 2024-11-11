@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -36,24 +37,89 @@
         height: 100%;
         margin: 0;
         font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
       }
+
+      /* Header with title */
+      header {
+        width: 100%;
+        background-color: #343a40;
+        color: white;
+        padding: 10px;
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+      }
+
+      /* Map container with window effect */
+      #map-container {
+        position: relative;
+        width: 90vw;
+        max-width: 800px;
+        height: 70vh;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        background-color: white;
+      }
+
       #map {
-        height: 100vh;
+        height: 100%;
+        width: 100%;
       }
-      .progress-bar {
+
+      /* Directions box */
+      #directions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        font-size: 0.9em;
+        max-width: 180px;
+        line-height: 1.4;
+        z-index: 1000;
+      }
+
+      /* Stats box styling */
+      #stats {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px;
+        border-radius: 8px;
+        z-index: 1000;
+        text-align: center;
         width: 80%;
+        max-width: 400px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .progress-bar {
+        width: 100%;
         background-color: #ddd;
         height: 20px;
         border-radius: 10px;
-        margin: 10px auto;
+        margin-top: 10px;
+        overflow: hidden;
       }
+
       .progress-fill {
         height: 100%;
         width: 0;
         background-color: #4caf50;
-        border-radius: 10px;
         transition: width 0.5s ease;
       }
+
       .badge {
         padding: 5px;
         background: #ddd;
@@ -62,61 +128,59 @@
         display: inline-block;
         opacity: 0.5;
       }
+
       .badge.earned {
         background: #4caf50;
         color: white;
         font-weight: bold;
         opacity: 1;
       }
-      #stats {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px;
-        border-radius: 10px;
-        z-index: 1000;
-        text-align: center;
-        width: 80%;
-        max-width: 500px;
-      }
-      #feedback {
-        margin-top: 15px;
-        font-size: 1rem;
-        color: #333;
-      }
     </style>
   </head>
   <body>
-    <div id="map"></div>
-    <div id="stats">
-      Points: <span id="points">0</span> | Level: <span id="level">1</span>
-      <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill"></div>
+    <!-- Header with title -->
+    <header>Historical Fact Quiz</header>
+
+    <!-- Map container with directions and stats -->
+    <div id="map-container">
+      <div id="map"></div>
+
+      <!-- Directions box -->
+      <div id="directions">
+        <strong>How to Play:</strong><br />
+        Click on any location on the map to get a historical fact and answer a
+        quiz question. Earn points for correct answers!
       </div>
-      <div class="badge" id="streak-badge">Consistency Streak</div>
-      <!-- Sentiment feedback area -->
-      <textarea
-        id="userFeedback"
-        rows="2"
-        placeholder="Optional: Leave feedback on this question..."
-        style="width: 100%; margin-top: 10px; border-radius: 5px"
-      ></textarea>
-      <button onclick="analyzeSentiment()">Analyze Feedback</button>
-      <p id="feedback"></p>
-      <!-- Button to show new basemap style for positive/negative/neutral sentiment -->
-      <button id="newStyleButton" style="display: none; margin-top: 10px">
-        See New Basemap Style
-      </button>
+
+      <!-- Stats box -->
+      <div id="stats">
+        Points: <span id="points">0</span> | Level: <span id="level">1</span>
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="badge" id="streak-badge">Consistency Streak</div>
+        <textarea
+          id="userFeedback"
+          rows="2"
+          placeholder="Optional: Leave feedback on this question..."
+          style="width: 100%; margin-top: 10px; border-radius: 5px"
+        ></textarea>
+        <button onclick="analyzeSentiment()" style="margin-top: 10px">
+          Analyze Feedback
+        </button>
+        <p id="feedback"></p>
+        <button id="newStyleButton" style="display: none; margin-top: 10px">
+          See New Basemap Style
+        </button>
+      </div>
     </div>
     <script>
       const accessToken =
-        'Your-key' // Replace with your ArcGIS token
+        'YOUR_KEY' // Replace with your ArcGIS token
       const azureKey =
-        'Your-key'
+        'YOUR_KEY'
       const openaiApiKey =
-        'Your-key' // Replace with your OpenAI API key
+        'YOUR_KEY' // Replace with your OpenAI API key
 
       const map = L.map('map').setView([38.885, -77.101], 13)
       L.esri.Vector.vectorBasemapLayer('arcgis/community', {
@@ -138,32 +202,43 @@
         { input: { correct: 0 }, output: { streak: 0 } }
       ])
 
+      let correctAnswer
+      let theCorrectAnswer
+
       async function fetchFactAndQuiz(locationName, difficulty) {
         const difficultyLabel =
           difficulty === 1 ? 'easy' : difficulty === 3 ? 'medium' : 'hard'
 
         const factResponse = await fetchOpenAI(
-          `Provide a verified historical fact about or near ${locationName}.`
+          `Provide a fun fact about or generally near ${locationName}.`
         )
         const fact =
           factResponse.choices[0]?.message?.content?.trim() ||
           'Fact unavailable.'
         const quizResponse = await fetchOpenAI(
-          `Create a true or false question about the historical site or event about or near "${locationName}" with a difficulty level of ${difficultyLabel} ensuring it includes the correct founding date or significant fact, suitable for a history quiz. Provide the question. Ensure that the correct answer is always true.`
+          `Create a true or false question about or generally near ${locationName} and give the answer.`
         )
 
         const quizContent =
           quizResponse.choices[0]?.message?.content?.trim() || ''
-        const [question, correctAnswerText] = quizContent
-          .split('\n')
-          .filter(opt => opt)
+        const [question, correctAnswerText] = quizContent.split('\n\nAnswer: ')
 
         const options = ['True', 'False']
-        let correctAnswer = correctAnswerText?.toLowerCase().includes('true')
-          ? 'True'
-          : 'False'
+        correctAnswer = correctAnswerText ? `Answer: ${correctAnswerText}` : ''
 
-        return { fact, question, options, correctAnswer }
+        console.log('The quiz content:' + quizContent)
+
+        if (correctAnswer.includes('True')) {
+          theCorrectAnswer = true
+        } else if (correctAnswer.includes('False')) {
+          theCorrectAnswer = false
+        } else {
+          theCorrectAnswer = null
+        }
+
+        console.log('THE ANSWER TO BE USED:' + theCorrectAnswer)
+
+        return { fact, question, theCorrectAnswer }
       }
 
       async function fetchOpenAI(prompt) {
@@ -174,7 +249,7 @@
             Authorization: `Bearer ${openaiApiKey}`
           },
           body: JSON.stringify({
-            model: 'gpt-4',
+            model: 'gpt-4o',
             messages: [
               {
                 role: 'system',
@@ -183,7 +258,7 @@
               },
               { role: 'user', content: prompt }
             ],
-            max_tokens: 150,
+            max_tokens: 80,
             temperature: 0.2
           })
         }).then(response => response.json())
@@ -257,6 +332,7 @@
         // Hide the button after changing the basemap style
         document.getElementById('newStyleButton').style.display = 'none'
       }
+
       async function initializeModel() {
         model = tf.sequential()
         model.add(
@@ -291,6 +367,7 @@
           locationName,
           difficulty
         )
+        let userAnswer
 
         const container = document.createElement('div')
         container.innerHTML = `
@@ -298,18 +375,21 @@
           <p>${fact}</p>
           <p><strong>Quiz (Difficulty: ${difficulty}/5):</strong> ${question}</p>
           <input type="text" id="userAnswer" placeholder="Type 'true' or 'false'">
-          <button onclick="submitAnswer('${correctAnswer.toLowerCase()}')">Submit</button>
+          <button onclick="submitAnswer()">Submit</button>
         `
         return container
       }
 
-      function submitAnswer(correctAnswer) {
-        // Convert both user input and correct answer to lowercase and trim any whitespace
+      function submitAnswer() {
         const userAnswer = document
           .getElementById('userAnswer')
           .value.trim()
           .toLowerCase()
-        const isCorrect = userAnswer === correctAnswer.trim().toLowerCase()
+
+        console.log('USER ANSWER:', userAnswer)
+        const isCorrect =
+          (userAnswer === 'true' && theCorrectAnswer === true) ||
+          (userAnswer === 'false' && theCorrectAnswer === false)
 
         userPerformance = isCorrect
           ? Math.min(userPerformance + 0.1, 1)
@@ -318,7 +398,9 @@
         updateStreak(isCorrect)
 
         alert(
-          isCorrect ? 'Correct!' : 'Incorrect. The correct answer was: True'
+          isCorrect
+            ? 'Correct!'
+            : `Incorrect. The correct answer was: ${theCorrectAnswer}`
         )
       }
 
@@ -330,23 +412,6 @@
           document.getElementById('level').textContent = level
           alert(`You've reached Level ${level}!`)
         }
-      }
-
-      async function checkAnswer(event, isCorrect) {
-        event.stopPropagation()
-        event.target.parentElement
-          .querySelectorAll('button')
-          .forEach(button => (button.disabled = true))
-
-        userPerformance = isCorrect
-          ? Math.min(userPerformance + 0.1, 1)
-          : Math.max(userPerformance - 0.1, 0)
-        updatePoints(isCorrect ? 10 : 0)
-        updateStreak(isCorrect)
-
-        alert(
-          isCorrect ? 'Correct!' : 'Incorrect. The correct answer was: True'
-        )
       }
 
       function updateStreak(isCorrect) {
@@ -379,6 +444,7 @@
             const marker = L.marker(e.latlng).addTo(layerGroup)
             const popupContent = await generatePopupContent(locationName)
             marker.bindPopup(popupContent).openPopup()
+            console.log(locationName)
           })
       })
 
